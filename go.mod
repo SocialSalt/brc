@@ -1,3 +1,3 @@
-module github.com/socialsalt/1brc
+module github.com/socialsalt/brc
 
 go 1.22.2
