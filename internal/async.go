@@ -1,63 +1,18 @@
-package main
+package brc
 
 import (
 	"bufio"
 	"fmt"
 	"log"
-	"math"
-	"net/http"
-	_ "net/http/pprof"
 	"os"
-	"strconv"
-	"strings"
 	"sync"
 )
 
 const numWorkers = 10
 
-type Stats struct {
-	Min   float32
-	Max   float32
-	Sum   float32
-	Count int
-}
-
-func (s *Stats) AddRecord(temp float32) {
-	if temp < s.Min {
-		s.Min = temp
-	}
-	if temp > s.Max {
-		s.Max = temp
-	}
-	s.Sum += temp
-	s.Count++
-}
-
-func NewStats() Stats {
-	return Stats{
-		Min:   math.MaxFloat32,
-		Max:   -1 * math.MaxFloat32,
-		Sum:   0,
-		Count: 0,
-	}
-}
-
 type TempRecord struct {
 	Name string
 	Temp float32
-}
-
-func parseLine(line string) (string, float32, error) {
-	parts := strings.Split(line, ";")
-	if len(parts) != 2 {
-		return "", 0, fmt.Errorf("Line does not follow format <city>;<temp>. Received line %q", line)
-	}
-	city := parts[0]
-	temp, err := strconv.ParseFloat(parts[1], 32)
-	if err != nil {
-		return "", 0, fmt.Errorf("Failed to parse temperature. Received %q", parts[1])
-	}
-	return city, float32(temp), nil
 }
 
 func parseWorker(lineChan chan string, recordChan chan TempRecord, wg *sync.WaitGroup) {
@@ -96,7 +51,7 @@ func mapBuilder(m map[string]*Stats, c chan TempRecord, wg *sync.WaitGroup) {
 	}
 }
 
-func brc(processWG *sync.WaitGroup) {
+func BRCAsync(processWG *sync.WaitGroup) {
 	defer processWG.Done()
 	fh, err := os.Open("measurements.txt")
 	if err != nil {
@@ -140,18 +95,3 @@ func brc(processWG *sync.WaitGroup) {
 		fmt.Printf("\t%+v\n", *val)
 	}
 }
-
-func main() {
-	var wg sync.WaitGroup
-	go func() {
-		fmt.Println(http.ListenAndServe("localhost:6060", nil))
-	}()
-
-	wg.Add(1)
-	go brc(&wg)
-	wg.Wait()
-}
-
-// func main() {
-// 	brc()
-// }
